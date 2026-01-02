@@ -261,13 +261,51 @@ class PasswordManager:
         for char in text:
             if char.isupper():
                 result += chr((ord(char)-ord('A')+shift)%26+ord('A'))
-            if char.islower():
+            elif char.islower():
                 result += chr((ord(char)-ord('a')+shift)%26+ord('a'))
             else:
                 result += char
+        return result
     # Caesar解密
     def caesar_decrypt(self,text,shift):
         return self.caesar_encrypt(text,-shift)
+    
+    # 异或加密解密
+    # 使用用户主密码对待加密密码进行异或加密
+    # 返回的是字节形式的加密后的密码
+    def xor_encrypt_decrypt(self,text):
+        # 若是字符串格式，则先变为字节序列；若是字节序列，则直接不变
+        if isinstance(text,str):
+            text_byte = text.encode('utf-8')
+        elif isinstance(text,bytes):
+            text_byte = text
+        main_password_byte = self.user_main_password.encode('utf-8')
+        # 将字节形式的主密码长度拓展至与待加密密码相同
+        extended_main_password_byte = main_password_byte * (len(text_byte)//len(main_password_byte)+1)
+        extended_main_password_byte = extended_main_password_byte[:len(text_byte)]
+        # 进行异或加密
+        result_byte =bytes([a ^ b for a, b in zip(text_byte, extended_main_password_byte)])
+        return result_byte
 
     # 加密函数
-    # 使用base64、Caesar、异或
+    # 使用Caesar、异或加密、base64
+    def total_encrypt(self,passwpord,caesar_shift=3):
+        # 凯撒加密(结果是字符串)
+        caesar_encrypt_password = self.caesar_encrypt(passwpord,caesar_shift)
+        # 异或加密(结果是字节序列)
+        xor_encrypt_password = self.xor_encrypt_decrypt(caesar_encrypt_password)
+        # base64加密(结果是字节序列)
+        base64_encrypt_byte = base64.b64encode(xor_encrypt_password)
+        # 将字节序列变为字符串
+        result = base64_encrypt_byte.decode('utf-8')
+        return result
+    # 解密函数
+    def total_decrypt(self,encrypted_password,caesar_shift=3):
+        # base64解密(需要先把字符串转化为字节序列,结果是字节序列)
+        base64_decrypt = base64.b64decode(encrypted_password.encode('utf-8'))
+        # 异或解密(结果是字节序列形式)
+        xor_decrypt_byte = self.xor_encrypt_decrypt(base64_decrypt)
+        # 将字节序列变为字符串
+        xor_decrypt = xor_decrypt_byte.decode('utf-8')
+        # 凯撒解密(结果是字符串)
+        result = self.caesar_decrypt(xor_decrypt)
