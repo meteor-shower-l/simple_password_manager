@@ -71,10 +71,10 @@ class PasswordManager:
         self.user_encrypted_password_path = None
         self.user_encrypted_password = None
         self.user_main_password = None
+        self.user_log_stae = False
 
     # 登录函数，用于完成用户登录，也可以切换账号
     # 在此函数中，完成用户主密码的赋值与加密密码本的读入
-    # 注意添加哈希算法
     def log_in(self):
         given_username = input("请输入用户名")
         given_userpassword = getpass.getpass("请输入用户密码")
@@ -84,6 +84,7 @@ class PasswordManager:
                 self.user_main_password = given_userpassword # 将用户输入的密码储存为密码(明文)
                 self.user_encrypted_password_path = self.path(f'{given_username}_password.jsonl')
                 self.user_encrypted_password = self.read_jsonl(self.user_encrypted_password_path) # 读取文件中的密码至内存
+                self.user_log_stae = True
                 print('登录成功')
             else:
                 print('登录失败,用户名或密码有误')
@@ -230,7 +231,7 @@ class PasswordManager:
         given_weburl = input('请输入要修改密码的网址')
         index = self.get_index_by_value_in_dict_list(given_weburl,self.user_encrypted_password)
         if index is None:
-            print(f'不存在网址为{given_weburl}的账号密码')
+            print(f'不存在网址{given_weburl}的账号密码')
         else:
             while True:
                 given_password_1 = getpass.getpass('请输入密码')
@@ -251,7 +252,7 @@ class PasswordManager:
     # 更新内存中储存的用户密码列表
     # 通过重新写入更新user_info.jsonl，存在IO频繁问题,需要迭代完善
     def password_delete(self):
-        given_weburl = input('请输入要修改密码的网址')
+        given_weburl = input('请输入要删除密码的网址')
         index = self.get_index_by_value_in_dict_list(given_weburl,self.user_encrypted_password)
         if index is None:
             print(f'不存在网址为{given_weburl}的账号密码')
@@ -274,12 +275,13 @@ class PasswordManager:
         mode = 0
         length = 0
         while (mode != 1) and (mode != 2) and (mode != 3) and (mode != 4):
-            mode = int(input("""请选择您需要的密码复杂度
-                        1.含有数字
-                        2.含有数字和小写字母
-                        3.含有数字、小写字母、大写字母
-                        4.含有数字、小写字母、大写字母、特殊符号
-                        """))
+            mode = int(input("""
+请选择您需要的密码复杂度
+1.含有数字
+2.含有数字和小写字母
+3.含有数字、小写字母、大写字母
+4.含有数字、小写字母、大写字母、特殊符号
+"""))
         while True:
             length = input('请输入密码长度(不超过25的数字)')
             if length.isdigit() and 9 <= int(length) <= 25:
@@ -296,7 +298,7 @@ class PasswordManager:
             char_set += ('+/')
         if not char_set:
             char_set = string.digits
-        return ''.join(secrets.choice(char_set) for _ in range(length))
+        print(f"密码生成成功:{''.join(secrets.choice(char_set) for _ in range(length))}")
     
     # Caesar加密
     def caesar_encrypt(self,text,shift):
@@ -310,7 +312,7 @@ class PasswordManager:
                 result += char
         return result
     # Caesar解密
-    def caesar_decrypt(self,text,shift):
+    def caesar_decrypt(self,text,shift=3):
         return self.caesar_encrypt(text,-shift)
     
     # 异或加密解密
@@ -352,3 +354,88 @@ class PasswordManager:
         xor_decrypt = xor_decrypt_byte.decode('utf-8')
         # 凯撒解密(结果是字符串)
         result = self.caesar_decrypt(xor_decrypt)
+        return result
+
+
+def show_menu_1():
+    print("""
+    欢迎使用密码管理系统！
+          """)
+if __name__ == '__main__':
+    show_menu_1()
+    pm = PasswordManager()
+    while True:
+        choice_1 = None
+        while choice_1 not in ['0','1','2','3','4','5','6']: 
+            choice_1 = input("""
+请输入您需要进行的选项：
+0.退出系统
+1.登录账号
+2.注册新账号
+3.修改当前账号主密码(未登录状态下不可用)
+4.删除当前账号(未登录状态下不可用)
+5.退出当前账号
+6.生成密码
+""")
+        if choice_1 == '0':
+            print('感谢您的使用，再见!')
+            break
+        elif choice_1 == '2':
+            pm.user_add()
+        elif choice_1 =='3':
+            if pm.user_log_stae ==False:
+                print('请在登录状态下执行本操作')
+            else:
+                pm.user_change_main_password()
+                print('已成功修改主密码')
+        elif choice_1 =='4':
+            if pm.user_log_stae ==False:
+                print('请在登录状态下执行本操作')
+            else:
+                pm.user_delete()
+                print('已成功退出并删除当前账号')
+                pm = PasswordManager()
+        elif choice_1 == '5':
+            pm = PasswordManager()
+            print("已退出当前账号")
+        elif choice_1 == '6':
+            pm.password_generator()
+        elif choice_1 == '1':
+            try_num_1 =0
+            while pm.user_log_stae is False and try_num_1 <3:
+                pm.log_in()
+                try_num_1 += 1
+            while True:
+                choice_2 = None
+                while choice_2 not in ['0','1','2','3','4','5']:
+                    choice_2 = input("""
+0.返回上一级目录
+1.查看已保存密码的网站
+2.查看网站密码
+3.修改网站密码
+4.删除网站密码
+5.新增网站密码
+""")
+                # 返回上一级目录
+                if choice_2 == '0':
+                    break #结束上10行处开始的循环
+                # 查看已保存密码的网站
+                if choice_2 == '1':
+                    pm.show_weburl()
+                # 查看网站密码
+                if choice_2 == '2':
+                    index = 0
+                    try_num_2 = 0
+                    while (int(index) not in range(1,len(pm.user_encrypted_password)+1) and try_num_2 <3):
+                        index = input('请输入想要查看的网站的序号')
+                        try_num_2 +=1
+                    pm.show_account_and_password(int(index))
+                # 修改网站密码
+                if choice_2 == '3':
+                    pm.password_change_password()
+                # 删除网站密码
+                if choice_2 =='4':
+                    pm.password_delete()
+                # 新增网站密码
+                if choice_2 =='5':
+                    pm.password_add()
