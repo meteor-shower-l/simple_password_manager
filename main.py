@@ -83,23 +83,26 @@ class PasswordManager:
         self.user_main_password = None
         self.user_log_stae = False
 
-    # 登录函数，用于完成用户登录，也可以切换账号
+    # 登录函数，用于完成用户登录
     # 在此函数中，完成用户主密码的赋值与加密密码本的读入
     def log_in(self):
-        given_username = input("请输入用户名")
-        given_userpassword = getpass.getpass("请输入用户密码")
-        index = self.get_index_by_value_in_dict_list(given_username,self.user_info)
-        if index is not None:
-            if  self.user_info[index]['encrypted_main_password']== self.hash_process(given_userpassword): # 若匹配成功
-                self.user_main_password = given_userpassword # 将用户输入的密码储存为密码(明文)
-                self.user_encrypted_password_path = self.path(f'{given_username}_password.jsonl')
-                self.user_encrypted_password = self.read_jsonl(self.user_encrypted_password_path) # 读取文件中的密码至内存
-                self.user_log_stae = True
-                print('登录成功')
-            else:
+        if self.user_log_stae ==True:
+            print('目前已登录，请退出后再进行账号')
+        else:
+            given_username = input("请输入用户名")
+            given_userpassword = getpass.getpass("请输入用户密码")
+            index = self.get_index_by_value_in_dict_list(given_username,self.user_info)
+            if index is not None:
+                if  self.user_info[index]['encrypted_main_password']== self.hash_process(given_userpassword): # 若匹配成功
+                    self.user_main_password = given_userpassword # 将用户输入的密码储存为密码(明文)
+                    self.user_encrypted_password_path = self.path(f'{given_username}_password.jsonl')
+                    self.user_encrypted_password = self.read_jsonl(self.user_encrypted_password_path) # 读取文件中的密码至内存
+                    self.user_log_stae = True
+                    print('登录成功')
+                else:
+                    print('登录失败,用户名或密码有误')
+            else: 
                 print('登录失败,用户名或密码有误')
-        else: 
-            print('登录失败,用户名或密码有误')
 
     # 新增用户函数
     # 使用getpass防止密码在屏幕可以见,使用while True循环确保两次密码相同
@@ -493,6 +496,7 @@ if __name__ == '__main__':
                     pm.log_in()
                     try_num_1 += 1
                 if try_num_1 == 3:
+                    print('连续3次登录失败，返回主菜单')
                     continue
                 while True:
                     choice_2 = None
@@ -515,7 +519,7 @@ if __name__ == '__main__':
                     if choice_2 == '2':
                         index = 0
                         try_num_2 = 0
-                        while (int(index) not in range(1,len(pm.user_encrypted_password)+1) and try_num_2 <3):
+                        while (int(index) not in range(1,len(pm.user_encrypted_password)+1) and try_num_2 <1):
                             index = input('请输入想要查看的网站的序号')
                             try_num_2 +=1
                         pm.show_account_and_password(int(index))
