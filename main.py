@@ -1,6 +1,3 @@
-# 迭代点：
-# 1.read_jsonl的异常处理
-
 # user_info结构:[{'username':用户名,'encrypted_main_password':主密码,},...]
 # user_encrypted_password结构:[{'weburl':网址,'username':用户名,'password':密码},...]
 
@@ -24,8 +21,12 @@ class PasswordManager:
     # 文件路径构建函数
     # 使用pathlib构建路径，避免使用绝对路径,从而确保程序的可移植性
     def path(self,file_name):
-        script_dir = Path(__file__).resolve().parent
-        return script_dir / file_name
+        try:
+            script_dir = Path(__file__).resolve().parent
+            return script_dir / file_name
+        except Exception as e:
+            print(f'构造路径时出错:{e}，返回输入的文件名')
+            return file_name
 
     # jsonl文件读取函数
     # 用于从jsonl文件中读入字典列表，若文件不存在，则返回空列表
@@ -43,8 +44,17 @@ class PasswordManager:
                     num +=1
                 print(f'载入成功，共读取到{num}条记录')
                 return info_dic_list
-        except:
-            print('载入成功，共读取到0条记录')
+        except FileNotFoundError :
+            print(f'文件{file_path}不存在')
+            print('已返回空列表')
+            return []
+        except json.JSONDecodeError :
+            print(f'json解析失败')
+            print('已返回空列表')
+            return []
+        except Exception :
+            print(f'发生错误')
+            print('已返回空列表')
             return []
 
     # 判断键是否在字典列表函数
@@ -96,25 +106,41 @@ class PasswordManager:
     # 更新内存中储存的用户列表
     def user_add(self):
         given_username = input('请输入用户名')
-        # 先判断用户是否存在
+        # 先判断用户是否存在以及是否为空
         # 若存在，则提示并直接退出
-        if self.get_index_by_value_in_dict_list(given_username,self.user_info) != None:
+        if (self.get_index_by_value_in_dict_list(given_username,self.user_info) != None):
             print('用户已存在')
+        # 若为空，则提示并直接退出
+        elif given_username =='':
+            print('用户名不能为空')
         # 若不存在，则提示用户输入密码
         else:
             while True:
                 given_password_1 = getpass.getpass('请输入密码')
                 given_password_2 = getpass.getpass('请再次输出密码以确认')
-                if given_password_1 == given_password_2:
+                # 除了确保必须相同外，还需要确保不为空
+                if given_password_1 =='' or given_password_2 =='':
+                    print('密码不可以为空')
+                elif given_password_1 == given_password_2 :
                     break
                 else:
                     print('两次输入的密码不同，请重新输入')
             info_dict = {"username":given_username,"encrypted_main_password":self.hash_process(given_password_1)}
             # 写入jsonl(直接使用a模式即可)
-            with open(self.USER_INFO_PATH,'a',encoding='utf-8') as f:
-                f.write(json.dumps(info_dict)+'\n')
-            self.user_info.append(info_dict)
-            print(f'成功创建新用户')
+            try:
+                with open(self.USER_INFO_PATH,'a',encoding='utf-8') as f:
+                    f.write(json.dumps(info_dict)+'\n')
+                self.user_info.append(info_dict)
+                print('成功创建新用户')
+            except PermissionError:
+                print(f"错误: 没有写入文件 {self.USER_INFO_PATH} 的权限,请重新设置权限后再试")
+                print('未成功创建用户')
+            except IOError:
+                print("写入文件时发生IO错误")
+                print('未成功创建用户')
+            except :
+                print('写入文件时发生错误')
+                print('未成功创建用户')
 
     # 修改用户主密码函数
     # 更新内存中储存的用户列表
@@ -133,7 +159,9 @@ class PasswordManager:
                 while True:
                     given_password_1 = getpass.getpass('请输入密码')
                     given_password_2 = getpass.getpass('请再次输出密码以确认')
-                    if given_password_1 == given_password_2:
+                    if given_password_1 == '' or given_password_2 == '':
+                        print('密码不可以为空')
+                    elif given_password_1 == given_password_2:
                         break
                     else:
                         print('两次输入的密码不同，请重新输入')
@@ -160,6 +188,7 @@ class PasswordManager:
                     for item in self.user_encrypted_password:
                         f.write(json.dumps(item)+'\n')
                 print(f'成功修改用户{given_username}的密码')
+                
 
     # 删除用户函数
     # 更新内存中储存的用户列表
@@ -176,12 +205,22 @@ class PasswordManager:
             else:
                 del self.user_info[index]
                 # jsonl写入(使用w模式覆盖原记录)
-                with open(self.USER_INFO_PATH,'w',encoding='utf-8') as f:
-                    for item in self.user_info:
-                        f.write(json.dumps(item)+'\n')
-                # 删除用户的密码文件
-                self.user_encrypted_password_path.unlink() #可以增加异常处理
-                print(f'成功删除用户{given_username}')
+                try:
+                    with open(self.USER_INFO_PATH,'w',encoding='utf-8') as f:
+                        for item in self.user_info:
+                            f.write(json.dumps(item)+'\n')
+                    # 删除用户的密码文件
+                    self.user_encrypted_password_path.unlink() 
+                    print(f'成功删除用户{given_username}')
+                except PermissionError:
+                    print(f"错误: 没有写入文件 {self.USER_INFO_PATH} 的权限,请重新设置权限后再试")
+                    print('未成功删除用户')
+                except IOError:
+                    print("写入文件时发生IO错误")
+                    print('未成功删除用户')
+                except :
+                    print('写入文件时发生错误')
+                    print('未成功删除用户')
 
     # 网址展示函数
     def show_weburl(self):
@@ -213,15 +252,29 @@ class PasswordManager:
             while True:
                 given_password_1 = getpass.getpass('请输入密码')
                 given_password_2 = getpass.getpass('请再次输入密码以确认')
-                if given_password_1 == given_password_2:
+                if given_password_1 == '' or given_password_2 == '':
+                    print('密码不可以为空')
+                elif given_password_1 == given_password_2:
                     break
+                else:
+                    print('两次输入的密码不同，请重新输入')
             weburl_username_password ={'weburl':given_weburl,
                                     'username':given_username,
                                     'password':self.total_encrypt(given_password_1)}
-            with open (self.user_encrypted_password_path,'a',encoding='utf-8') as f:
-                f.write(json.dumps(weburl_username_password)+'\n')
-            self.user_encrypted_password.append(weburl_username_password)
-            print(f'成功创建{given_weburl}网站的账号密码')
+            try:
+                with open (self.user_encrypted_password_path,'a',encoding='utf-8') as f:
+                    f.write(json.dumps(weburl_username_password)+'\n')
+                self.user_encrypted_password.append(weburl_username_password)
+                print(f'成功创建{given_weburl}网站的账号密码')
+            except PermissionError:
+                print(f"错误: 没有写入文件 {self.user_encrypted_password_path} 的权限,请重新设置权限后再试")
+                print('未成功新增账号密码')
+            except IOError:
+                print("写入文件时发生IO错误")
+                print('未成功新增账号密码')
+            except :
+                print('写入文件时发生错误')
+                print('未成功新增账号密码')
     
     # 修改网站密码函数
     # 使用getpass防止密码在屏幕可以见,使用while True循环确保两次密码相同
@@ -236,16 +289,28 @@ class PasswordManager:
             while True:
                 given_password_1 = getpass.getpass('请输入密码')
                 given_password_2 = getpass.getpass('请再次输出密码以确认')
-                if given_password_1 == given_password_2:
+                if given_password_1 == '' or given_password_2 == '':
+                    print ('密码不可以为空')
+                elif given_password_1 == given_password_2:
                     break
                 else:
                     print('两次输入的密码不同，请重新输入')
             self.user_encrypted_password[index]['password'] = self.total_encrypt(given_password_1)
             # jsonl写入函数(使用w模式覆盖原记录)
-            with open (self.user_encrypted_password_path,'w',encoding='utf-8') as f:
-                for item in self.user_encrypted_password:
-                    f.write(json.dumps(item)+'\n')
-            print(f'已成功修改{given_weburl}网站的密码')
+            try:
+                with open (self.user_encrypted_password_path,'w',encoding='utf-8') as f:
+                    for item in self.user_encrypted_password:
+                        f.write(json.dumps(item)+'\n')
+                print(f'已成功修改{given_weburl}网站的密码')
+            except PermissionError:
+                print(f"错误: 没有写入文件 {self.user_encrypted_password_path} 的权限,请重新设置权限后再试")
+                print('未成功修改账号密码')
+            except IOError:
+                print("写入文件时发生IO错误")
+                print('未成功修改账号密码')
+            except :
+                print('写入文件时发生错误')
+                print('未成功修改账号密码')
 
     # 删除网站密码函数
     # 使用getpass防止密码在屏幕可以见
@@ -263,10 +328,20 @@ class PasswordManager:
             else:
                 del self.user_encrypted_password[index]
                 # jsonl写入函数(使用w模式覆盖原记录)
-                with open (self.user_encrypted_password_path,'w',encoding='utf-8') as f:
-                    for item in self.user_encrypted_password:
-                        f.write(json.dumps(item)+'\n')
-                print(f'成功删除{given_weburl}网站的账号密码')
+                try:
+                    with open (self.user_encrypted_password_path,'w',encoding='utf-8') as f:
+                        for item in self.user_encrypted_password:
+                            f.write(json.dumps(item)+'\n')
+                    print(f'成功删除{given_weburl}网站的账号密码')
+                except PermissionError:
+                    print(f"错误: 没有写入文件 {self.user_encrypted_password_path} 的权限,请重新设置权限后再试")
+                    print('未成功删除账号密码')
+                except IOError:
+                    print("写入文件时发生IO错误")
+                    print('未成功删除账号密码')
+                except :
+                    print('写入文件时发生错误')
+                    print('未成功删除账号密码')
 
     # 密码生成函数,允许指定复杂度与长度 
     # 在函数内与用户交互，获得用户指定的复杂度与长度
@@ -335,40 +410,49 @@ class PasswordManager:
     # 加密函数
     # 使用Caesar、异或加密、base64
     def total_encrypt(self,password,caesar_shift=3):
-        # 凯撒加密(结果是字符串)
-        caesar_encrypt_password = self.caesar_encrypt(password,caesar_shift)
-        # 异或加密(结果是字节序列)
-        xor_encrypt_password = self.xor_encrypt_decrypt(caesar_encrypt_password)
-        # base64加密(结果是字节序列)
-        base64_encrypt_byte = base64.b64encode(xor_encrypt_password)
-        # 将字节序列变为字符串
-        result = base64_encrypt_byte.decode('utf-8')
-        return result
+        try:
+            # 凯撒加密(结果是字符串)
+            caesar_encrypt_password = self.caesar_encrypt(password,caesar_shift)
+            # 异或加密(结果是字节序列)
+            xor_encrypt_password = self.xor_encrypt_decrypt(caesar_encrypt_password)
+            # base64加密(结果是字节序列)
+            base64_encrypt_byte = base64.b64encode(xor_encrypt_password)
+            # 将字节序列变为字符串
+            result = base64_encrypt_byte.decode('utf-8')
+            return result
+        except ZeroDivisionError:
+            print('发生错误，主密码未设置，请重新登录后再试')
+            return ''
+        except Exception as e :
+            print(f'发生错误:{e},请排查后再试')
+            return ''
+
     # 解密函数
     def total_decrypt(self,encrypted_password,caesar_shift=3):
-        # base64解密(需要先把字符串转化为字节序列,结果是字节序列)
-        base64_decrypt = base64.b64decode(encrypted_password.encode('utf-8'))
-        # 异或解密(结果是字节序列形式)
-        xor_decrypt_byte = self.xor_encrypt_decrypt(base64_decrypt)
-        # 将字节序列变为字符串
-        xor_decrypt = xor_decrypt_byte.decode('utf-8')
-        # 凯撒解密(结果是字符串)
-        result = self.caesar_decrypt(xor_decrypt)
-        return result
+        try:
+            # base64解密(需要先把字符串转化为字节序列,结果是字节序列)
+            base64_decrypt = base64.b64decode(encrypted_password.encode('utf-8'))
+            # 异或解密(结果是字节序列形式)
+            xor_decrypt_byte = self.xor_encrypt_decrypt(base64_decrypt)
+            # 将字节序列变为字符串
+            xor_decrypt = xor_decrypt_byte.decode('utf-8')
+            # 凯撒解密(结果是字符串)
+            result = self.caesar_decrypt(xor_decrypt)
+            return result
+        except ZeroDivisionError:
+            print('发生错误，主密码未设置，请重新登录后再试')
+            return ''
+        except Exception as e :
+            print(f'发生错误:{e},请排查后再试')
+            return ''
 
-
-def show_menu_1():
-    print("""
-    欢迎使用密码管理系统！
-          """)
 if __name__ == '__main__':
-    show_menu_1()
+    print('欢迎使用密码管理系统')
     pm = PasswordManager()
     while True:
         choice_1 = None
         while choice_1 not in ['0','1','2','3','4','5','6']: 
-            choice_1 = input("""
-请输入您需要进行的选项：
+            choice_1 = input("""请输入您需要进行的选项：
 0.退出系统
 1.登录用户账号
 2.注册用户新账号
