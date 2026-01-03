@@ -401,14 +401,19 @@ if __name__ == '__main__':
         elif choice_1 == '6':
             pm.password_generator()
         elif choice_1 == '1':
-            try_num_1 =0
-            while pm.user_log_stae is False and try_num_1 <3:
-                pm.log_in()
-                try_num_1 += 1
-            while True:
-                choice_2 = None
-                while choice_2 not in ['0','1','2','3','4','5']:
-                    choice_2 = input("""
+            if pm.user_log_stae == True:
+                print('当前已经登录')
+            else:
+                try_num_1 =0
+                while pm.user_log_stae is False and try_num_1 <3:
+                    pm.log_in()
+                    try_num_1 += 1
+                if try_num_1 == 3:
+                    continue
+                while True:
+                    choice_2 = None
+                    while choice_2 not in ['0','1','2','3','4','5']:
+                        choice_2 = input("""
 0.返回上一级目录
 1.查看已保存密码的网站
 2.查看网站密码
@@ -416,26 +421,26 @@ if __name__ == '__main__':
 4.删除网站密码
 5.新增网站密码
 """)
-                # 返回上一级目录
-                if choice_2 == '0':
-                    break #结束上10行处开始的循环
-                # 查看已保存密码的网站
-                if choice_2 == '1':
-                    pm.show_weburl()
-                # 查看网站密码
-                if choice_2 == '2':
-                    index = 0
-                    try_num_2 = 0
-                    while (int(index) not in range(1,len(pm.user_encrypted_password)+1) and try_num_2 <3):
-                        index = input('请输入想要查看的网站的序号')
-                        try_num_2 +=1
-                    pm.show_account_and_password(int(index))
-                # 修改网站密码
-                if choice_2 == '3':
-                    pm.password_change_password()
-                # 删除网站密码
-                if choice_2 =='4':
-                    pm.password_delete()
-                # 新增网站密码
-                if choice_2 =='5':
-                    pm.password_add()
+                    # 返回上一级目录
+                    if choice_2 == '0':
+                        break #结束上10行处开始的循环
+                    # 查看已保存密码的网站
+                    if choice_2 == '1':
+                        pm.show_weburl()
+                    # 查看网站密码
+                    if choice_2 == '2':
+                        index = 0
+                        try_num_2 = 0
+                        while (int(index) not in range(1,len(pm.user_encrypted_password)+1) and try_num_2 <3):
+                            index = input('请输入想要查看的网站的序号')
+                            try_num_2 +=1
+                        pm.show_account_and_password(int(index))
+                    # 修改网站密码
+                    if choice_2 == '3':
+                        pm.password_change_password()
+                    # 删除网站密码
+                    if choice_2 =='4':
+                        pm.password_delete()
+                    # 新增网站密码
+                    if choice_2 =='5':
+                        pm.password_add()
