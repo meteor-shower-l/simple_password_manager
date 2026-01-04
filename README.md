@@ -4,7 +4,7 @@
 
 ## 功能特点
 - 具有注册、登录、删除、修改主密码等用户功能
-- 具有添加、查看、删除账号密码等密码管理功能
+- 具有添加、查看、删除、修改账号密码等密码管理功能
 - 内置可设置长度和复杂度的随机密码生成器
 - 使用base64、Caesar、异或加密
 - 网站密码根据用户主密码加密，防止其他用户查看密码
@@ -18,7 +18,7 @@
     {'username':用户名2,'encrypted_main_password':主密码哈希值2}
     ...
     ```
-2. 使用user_encrypted_password.jsonl储存一个用户的网站、账号、密码。每个用户具有唯一对应的"用户名"_encrypted_password.jsonl。具体结构如下：  
+2. 使用user_encrypted_password.jsonl储存一个用户的网站、账号、加密后密码。每个用户具有唯一对应的"用户名"_encrypted_password.jsonl。具体结构如下：  
     ```jsonl
     {'weburl':网址1,'username':用户名1,'password':密码1}
     {'weburl':网址2,'username':用户名2,'password':密码2}
